@@ -25,6 +25,7 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -113,7 +114,7 @@ public class FbDialog extends Dialog {
 
     private void setUpWebView(int margin) {
         LinearLayout webViewContainer = new LinearLayout(getContext());
-        mWebView = new WebView(getContext());
+        mWebView = new CustomWebView(getContext());
         mWebView.setVerticalScrollBarEnabled(false);
         mWebView.setHorizontalScrollBarEnabled(false);
         mWebView.setWebViewClient(new FbDialog.FbWebViewClient());
@@ -125,6 +126,18 @@ public class FbDialog extends Dialog {
         webViewContainer.setPadding(margin, margin, margin, margin);
         webViewContainer.addView(mWebView);
         mContent.addView(webViewContainer);
+    }
+    
+    @Override
+    public void dismiss() {
+    	if (this.isShowing()) {
+    		try {
+    			super.dismiss();
+    		}
+    		catch (IllegalArgumentException e) {
+    			Util.logd("Facebook-FbDialog", "Ignored IllegalArgumentException dismissing dialog.");
+    		}
+    	}
     }
 
     private class FbWebViewClient extends WebViewClient {
@@ -183,7 +196,14 @@ public class FbDialog extends Dialog {
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
-            mSpinner.dismiss();
+            if (mSpinner.isShowing()) {
+        		try {
+        			mSpinner.dismiss();
+        		}
+        		catch (IllegalArgumentException e) {
+        			Util.logd("Facebook-FbDialog", "Ignored IllegalArgumentException dismissing spinner.");
+        		}
+            }
             /* 
              * Once webview is fully loaded, set the mContent background to be transparent
              * and make visible the 'x' image. 
@@ -192,5 +212,33 @@ public class FbDialog extends Dialog {
             mWebView.setVisibility(View.VISIBLE);
             mCrossImage.setVisibility(View.VISIBLE);
         }
+    }
+    
+    /*
+    * Workaround for Null pointer exception in WebView.onWindowFocusChanged
+    * See: http://www.zubha-labs.com/workaround-for-null-pointer-excpetion-in-webv
+    */
+    public class CustomWebView extends WebView {
+
+    	public CustomWebView(Context context) {
+    		super(context);
+    	}
+
+    	public CustomWebView(Context context, AttributeSet attrs, int defStyle) {
+    		super(context, attrs, defStyle);
+    	}
+
+    	public CustomWebView(Context context, AttributeSet attrs) {
+    		super(context, attrs);
+    	}
+
+    	@Override
+    	public void onWindowFocusChanged(boolean hasWindowFocus) {
+    		try{
+    			super.onWindowFocusChanged(hasWindowFocus);
+    		}catch(NullPointerException e){
+    			// Catch null pointer exception 
+    		}
+    	}
     }
 }
